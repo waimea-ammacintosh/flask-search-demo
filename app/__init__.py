@@ -41,7 +41,13 @@ def show_all_creatures():
         params = ()
         creatures = db.execute(sql, params).fetchall()
 
-        return render_template("pages/creature_list.jinja", creatures=creatures)
+        sql2 = """
+                SELECT DISTINCT species FROM creatures ORDER BY species ASC
+            """
+        species = db.execute(sql2, params).fetchall()
+        species_list = [creature['species'] for creature in species]
+
+        return render_template("pages/creature_list.jinja", creatures=creatures, species_list=species_list)
 
 
 #-----------------------------------------------------------
@@ -56,6 +62,35 @@ def show_help():
     flash("Error test message", "error")
 
     return render_template("pages/help.jinja")
+
+
+#-----------------------------------------------------------
+# Search creatures
+#-----------------------------------------------------------
+@app.get("/search")
+def process_search():
+    search_term = request.args.get('q','')
+    search_match = f"%{search_term}%"
+    search_species = request.args.get('species','')
+    species_match = f"%{search_species}%"
+
+    with connect_db() as db:
+        sql = """
+            SELECT id, species, name
+            FROM creatures
+            WHERE name LIKE ?
+            AND species LIKE ?
+        """
+        params = (search_match, species_match)
+        creatures = db.execute(sql, params).fetchall()
+        sql2 = """
+                SELECT DISTINCT species FROM creatures ORDER BY species ASC
+            """
+        params2 = ()
+        species = db.execute(sql2, params2).fetchall()
+        species_list = [creature['species'] for creature in species]
+
+        return render_template("pages/creature_list.jinja", creatures=creatures, search_term=search_term, species_list=species_list, species=search_species)
 
 
 #===========================================================
